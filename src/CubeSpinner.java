@@ -2,6 +2,8 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.nio.FloatBuffer;
 
 import static org.lwjgl.system.MemoryStack.stackPush;
@@ -25,13 +27,19 @@ public class CubeSpinner {
     private float angleY = 0.0f;
     private float speed = 0.1f;
 
+    private boolean dragging = false;
+    private double lastX = 0.0;
+    private double lastY = 0.0;
+
+
+
     public void run()
 
     {
         init();
         loop();
 
-        //Free the window callbacks and ddestroy the window
+        //Free the window callbacks and destroy the window
         glfwFreeCallbacks(window);
         glfwDestroyWindow(window);
 
@@ -60,12 +68,44 @@ public class CubeSpinner {
             throw new RuntimeException("Failed to create the GLFW window");
 
         //Setup a key callback. It will be called every time a key is pressed, repeated or released.
+
+
         glfwSetKeyCallback(window, (window, key, scancode, action, mods) ->
         {
             if (key == GLFW_KEY_ESCAPE && action ==GLFW_RELEASE)
                 glfwSetWindowShouldClose(window, true);
 
         });
+        glfwSetMouseButtonCallback(window, (window, button, action, mods) -> {
+            if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                if (action == GLFW_PRESS) {
+                    dragging = true;
+                    // Record the initial mouse position.
+                    DoubleBuffer xpos = BufferUtils.createDoubleBuffer(1);
+                    DoubleBuffer ypos = BufferUtils.createDoubleBuffer(1);
+                    glfwGetCursorPos(window, xpos, ypos);
+                    lastX = xpos.get(0);
+                    lastY = ypos.get(0);
+                } else if (action == GLFW_RELEASE) {
+                    dragging = false;
+                }
+            }
+        });
+
+        // --- Setup cursor position callback ---
+        glfwSetCursorPosCallback(window, (window, xpos, ypos) -> {
+            if (dragging) {
+                double deltaX = xpos - lastX;
+                double deltaY = ypos - lastY;
+                // Update rotation angles based on mouse movement.
+                angleY += deltaX * 0.1f;
+                angleX += deltaY * 0.1f;
+                lastX = xpos;
+                lastY = ypos;
+            }
+        });
+
+
         //Get the thread stack and push a new frame
         try (MemoryStack stack = stackPush()) {
             IntBuffer pWidth = stack.mallocInt(1);
@@ -111,7 +151,7 @@ public class CubeSpinner {
 
         while ( !glfwWindowShouldClose(window) )
         {
-            handleInput();
+//            handleInput();
 
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glLoadIdentity();
@@ -134,17 +174,23 @@ public class CubeSpinner {
         glFrustum(-fW, fW, -fH, fH, zNear, zFar);
     }
 
-    private void handleInput()
-    {
-        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-            angleX -= speed;
-        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-            angleX += speed;
-        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-            angleY -= speed;
-        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-            angleY += speed;
-    }
+//    private void handleInput()
+//    {
+//        addMouseListener(new MouseAdapter(){
+//                             @Override
+//                             public void mousePressed(MouseEvent e) {
+//                                 initialClick e.getPoint();
+//                             }
+//                         });
+//        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+//            angleX -= speed;
+//        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+//            angleX += speed;
+//        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+//            angleY -= speed;
+//        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+//            angleY += speed;
+    //}
 
     private void drawCube()
     {
